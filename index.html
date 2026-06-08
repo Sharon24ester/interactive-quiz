@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Quiz</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .quiz-container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 600px;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .quiz-header {
+      background: #4a5568;
+      color: white;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .quiz-header h1 {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 10px;
+      height: 8px;
+      margin-top: 16px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      background: #48bb78;
+      height: 100%;
+      border-radius: 10px;
+      transition: width 0.3s ease;
+    }
+
+    .quiz-body {
+      padding: 32px;
+    }
+
+    .question-number {
+      color: #718096;
+      font-size: 0.875rem;
+      margin-bottom: 8px;
+    }
+
+    .question-text {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 24px;
+      line-height: 1.4;
+    }
+
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .option {
+      background: #f7fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .option:hover:not(.disabled) {
+      border-color: #667eea;
+      background: #eef2ff;
+    }
+
+    .option.selected {
+      border-color: #667eea;
+      background: #eef2ff;
+    }
+
+    .option.correct {
+      border-color: #48bb78;
+      background: #f0fff4;
+    }
+
+    .option.incorrect {
+      border-color: #f56565;
+      background: #fff5f5;
+    }
+
+    .option.disabled {
+      cursor: not-allowed;
+    }
+
+    .option-letter {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: 600;
+      color: #4a5568;
+      flex-shrink: 0;
+    }
+
+    .option.selected .option-letter {
+      background: #667eea;
+      color: white;
+    }
+
+    .option.correct .option-letter {
+      background: #48bb78;
+      color: white;
+    }
+
+    .option.incorrect .option-letter {
+      background: #f56565;
+      color: white;
+    }
+
+    .option-text {
+      color: #2d3748;
+    }
+
+    .feedback {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .feedback.show {
+      display: block;
+    }
+
+    .feedback.correct {
+      background: #f0fff4;
+      color: #276749;
+    }
+
+    .feedback.incorrect {
+      background: #fff5f5;
+      color: #c53030;
+    }
+
+    .quiz-footer {
+      padding: 24px 32px;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .score {
+      color: #718096;
+      font-size: 0.875rem;
+    }
+
+    .btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 28px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .btn:hover {
+      background: #5a67d8;
+    }
+
+    .btn:disabled {
+      background: #cbd5e0;
+      cursor: not-allowed;
+    }
+
+    /* Results screen */
+    .results {
+      text-align: center;
+      padding: 48px 32px;
+    }
+
+    .results-icon {
+      font-size: 4rem;
+      margin-bottom: 16px;
+    }
+
+    .results-title {
+      font-size: 1.75rem;
+      color: #2d3748;
+      margin-bottom: 8px;
+    }
+
+    .results-score {
+      font-size: 3rem;
+      font-weight: 700;
+      color: #667eea;
+      margin: 24px 0;
+    }
+
+    .results-message {
+      color: #718096;
+      margin-bottom: 32px;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="quiz-container">
+    <!-- Quiz Screen -->
+    <div id="quiz-screen">
+      <div class="quiz-header">
+        <h1>Knowledge Quiz</h1>
+        <p id="header-progress">Question 1 of 5</p>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill" style="width: 20%"></div>
+        </div>
+      </div>
+
+      <div class="quiz-body">
+        <p class="question-number" id="question-number">Question 1</p>
+        <h2 class="question-text" id="question-text">Loading question...</h2>
+
+        <div class="options" id="options-container"></div>
+
+        <div class="feedback" id="feedback"></div>
+      </div>
+
+      <div class="quiz-footer">
+        <span class="score" id="score-display">Score: 0</span>
+        <button class="btn" id="next-btn" disabled>Next Question</button>
+      </div>
+    </div>
+
+    <!-- Results Screen -->
+    <div id="results-screen" class="hidden">
+      <div class="results">
+        <div class="results-icon" id="results-icon">🏆</div>
+        <h2 class="results-title">Quiz Complete!</h2>
+        <div class="results-score" id="final-score">0/5</div>
+        <p class="results-message" id="results-message">Great effort!</p>
+        <button class="btn" id="restart-btn">Play Again</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Quiz questions - easily customizable
+    const quizData = [
+      {
+        question: "What is the capital of Japan?",
+        options: ["Seoul", "Beijing", "Tokyo", "Bangkok"],
+        correct: 2,
+        explanation: "Tokyo has been the capital of Japan since 1868."
+      },
+      {
+        question: "Which planet is known as the Red Planet?",
+        options: ["Venus", "Mars", "Jupiter", "Saturn"],
+        correct: 1,
+        explanation: "Mars appears red due to iron oxide (rust) on its surface."
+      },
+      {
+        question: "What is the largest mammal in the world?",
+        options: ["African Elephant", "Blue Whale", "Giraffe", "Hippopotamus"],
+        correct: 1,
+        explanation: "Blue whales can grow up to 100 feet long and weigh 200 tons."
+      },
+      {
+        question: "In what year did the first Moon landing occur?",
+        options: ["1965", "1967", "1969", "1971"],
+        correct: 2,
+        explanation: "Apollo 11 landed on the Moon on July 20, 1969."
+      },
+      {
+        question: "What is the chemical symbol for gold?",
+        options: ["Go", "Gd", "Au", "Ag"],
+        correct: 2,
+        explanation: "Au comes from the Latin word 'aurum' meaning gold."
+      }
+    ];
+
+    // Quiz state
+    let currentQuestion = 0;
+    let score = 0;
+    let answered = false;
+
+    // DOM elements
+    const questionNumber = document.getElementById('question-number');
+    const questionText = document.getElementById('question-text');
+    const optionsContainer = document.getElementById('options-container');
+    const feedback = document.getElementById('feedback');
+    const nextBtn = document.getElementById('next-btn');
+    const scoreDisplay = document.getElementById('score-display');
+    const progressFill = document.getElementById('progress-fill');
+    const headerProgress = document.getElementById('header-progress');
+    const quizScreen = document.getElementById('quiz-screen');
+    const resultsScreen = document.getElementById('results-screen');
+    const finalScore = document.getElementById('final-score');
+    const resultsMessage = document.getElementById('results-message');
+    const resultsIcon = document.getElementById('results-icon');
+    const restartBtn = document.getElementById('restart-btn');
+
+    // Initialize quiz
+    function initQuiz() {
+      currentQuestion = 0;
+      score = 0;
+      answered = false;
+      quizScreen.classList.remove('hidden');
+      resultsScreen.classList.add('hidden');
+      loadQuestion();
+    }
+
+    // Load current question
+    function loadQuestion() {
+      answered = false;
+      const q = quizData[currentQuestion];
+
+      questionNumber.textContent = `Question ${currentQuestion + 1}`;
+      headerProgress.textContent = `Question ${currentQuestion + 1} of ${quizData.length}`;
+      questionText.textContent = q.question;
+      progressFill.style.width = `${((currentQuestion + 1) / quizData.length) * 100}%`;
+
+      // Clear and rebuild options
+      optionsContainer.innerHTML = '';
+      const letters = ['A', 'B', 'C', 'D'];
+
+      q.options.forEach((option, index) => {
+        const optionEl = document.createElement('div');
+        optionEl.className = 'option';
+        optionEl.innerHTML = `
+          <span class="option-letter">${letters[index]}</span>
+          <span class="option-text">${option}</span>
+        `;
+        optionEl.addEventListener('click', () => selectOption(index));
+        optionsContainer.appendChild(optionEl);
+      });
+
+      // Reset UI
+      feedback.classList.remove('show', 'correct', 'incorrect');
+      nextBtn.disabled = true;
+      nextBtn.textContent = currentQuestion === quizData.length - 1 ? 'See Results' : 'Next Question';
+      scoreDisplay.textContent = `Score: ${score}`;
+    }
+
+    // Handle option selection
+    function selectOption(selectedIndex) {
+      if (answered) return;
+      answered = true;
+
+      const q = quizData[currentQuestion];
+      const options = optionsContainer.querySelectorAll('.option');
+
+      // Disable all options
+      options.forEach(opt => opt.classList.add('disabled'));
+
+      // Mark selected option
+      options[selectedIndex].classList.add('selected');
+
+      // Check answer
+      if (selectedIndex === q.correct) {
+        score++;
+        options[selectedIndex].classList.add('correct');
+        feedback.textContent = `✓ Correct! ${q.explanation}`;
+        feedback.classList.add('correct');
+      } else {
+        options[selectedIndex].classList.add('incorrect');
+        options[q.correct].classList.add('correct');
+        feedback.textContent = `✗ Incorrect. ${q.explanation}`;
+        feedback.classList.add('incorrect');
+      }
+
+      feedback.classList.add('show');
+      scoreDisplay.textContent = `Score: ${score}`;
+      nextBtn.disabled = false;
+    }
+
+    // Next question or show results
+    function nextQuestion() {
+      currentQuestion++;
+
+      if (currentQuestion >= quizData.length) {
+        showResults();
+      } else {
+        loadQuestion();
+      }
+    }
+
+    // Show final results
+    function showResults() {
+      quizScreen.classList.add('hidden');
+      resultsScreen.classList.remove('hidden');
+
+      finalScore.textContent = `${score}/${quizData.length}`;
+
+      const percentage = (score / quizData.length) * 100;
+
+      if (percentage === 100) {
+        resultsIcon.textContent = '🏆';
+        resultsMessage.textContent = 'Perfect score! Outstanding!';
+      } else if (percentage >= 80) {
+        resultsIcon.textContent = '🌟';
+        resultsMessage.textContent = 'Excellent work!';
+      } else if (percentage >= 60) {
+        resultsIcon.textContent = '👍';
+        resultsMessage.textContent = 'Good job! Keep learning!';
+      } else if (percentage >= 40) {
+        resultsIcon.textContent = '📚';
+        resultsMessage.textContent = 'Not bad! Room for improvement.';
+      } else {
+        resultsIcon.textContent = '💪';
+        resultsMessage.textContent = 'Keep practicing!';
+      }
+    }
+
+    // Event listeners
+    nextBtn.addEventListener('click', nextQuestion);
+    restartBtn.addEventListener('click', initQuiz);
+
+    // Start quiz
+    initQuiz();
+  </script>
+</body>
+</html>
